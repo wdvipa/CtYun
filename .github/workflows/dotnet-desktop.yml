@@ -16,29 +16,29 @@ jobs:
       matrix:
         include:
           - rid: linux-x64
-            output_name: CtYun
             archive_name: ctyun-linux-x64
+            publish_args: -p:PublishSingleFile=true
           - rid: linux-arm
-            output_name: CtYun
             archive_name: ctyun-linux-arm
+            publish_args: -p:PublishSingleFile=true
           - rid: linux-arm64
-            output_name: CtYun
             archive_name: ctyun-linux-arm64
+            publish_args: -p:PublishSingleFile=true
           - rid: win-x64
-            output_name: CtYun.exe
             archive_name: ctyun-win-x64
+            publish_args: -p:PublishSingleFile=true
           - rid: win-arm64
-            output_name: CtYun.exe
             archive_name: ctyun-win-arm64
+            publish_args: -p:PublishSingleFile=true
           - rid: android-arm64
-            output_name: CtYun
             archive_name: ctyun-android-arm64
+            publish_args: -p:PublishSingleFile=false -p:UseAppHost=true
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 8.0.x
 
@@ -58,7 +58,7 @@ jobs:
         run: dotnet restore CtYun/CtYun.csproj
 
       - name: Publish ${{ matrix.rid }}
-        run: dotnet publish CtYun/CtYun.csproj -c Release -r ${{ matrix.rid }} --self-contained true -p:PublishSingleFile=true -p:PublishAot=false -o publish/${{ matrix.rid }}
+        run: dotnet publish CtYun/CtYun.csproj -c Release -r ${{ matrix.rid }} --self-contained true -p:PublishAot=false ${{ matrix.publish_args }} -o publish/${{ matrix.rid }}
 
       - name: Pack ${{ matrix.rid }}
         shell: bash
@@ -78,10 +78,10 @@ jobs:
     if: github.event_name != 'pull_request'
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 8.0.x
 

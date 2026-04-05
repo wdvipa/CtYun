@@ -362,8 +362,6 @@ static string GenerateRandomString(int length)
     return new string(Enumerable.Repeat(chars, length).Select(s => s[RandomNumberGenerator.GetInt32(s.Length)]).ToArray());
 }
 
-static bool IsRunningInContainer() => File.Exists("/.dockerenv");
-
 static bool IsAndroid() => OperatingSystem.IsAndroid();
 
 static bool HasEnvironmentCredentials()
