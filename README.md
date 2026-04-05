@@ -67,10 +67,12 @@ Actions 会自动构建以下平台产物：
 
 当推送 `v*` 标签时，还会自动执行 GitHub Release 发布流程，将构建产物作为附件上传到 Release。
 
-如果仓库已配置 `DOCKER_USERNAME` 与 `DOCKER_PASSWORD` secrets，还会继续执行 [Docker 多架构镜像构建](.github/workflows/dotnet-desktop.yml:112)，推送：
+如果仓库已配置 `DOCKER_USERNAME` 与 `DOCKERHUB_TOKEN` secrets，还会继续执行 [Docker 多架构镜像构建](.github/workflows/dotnet-desktop.yml:112)，推送：
 
 - `ctyun:版本号`
 - `ctyun:latest`
+
+其中 `DOCKERHUB_TOKEN` 需使用 Docker Hub 的 Personal Access Token，而不是账号密码。
 
 ### 多账号使用说明
 

@@ -127,11 +127,11 @@ jobs:
       - name: 为 Docker 构建发布 Linux x64
         run: dotnet publish CtYun/CtYun.csproj -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true -p:PublishAot=false -o publish
 
-      - name: 登录 Docker Hub
+      - name: 使用 Personal Access Token 登录 Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: 设置 Docker Buildx
         uses: docker/setup-buildx-action@v3
