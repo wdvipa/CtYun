@@ -1,6 +1,6 @@
 ### windows用户直接下载Releases执行即可。
 
-### 编译 Linux / Windows / Android 二进制
+### 编译 Linux / Windows 二进制
 
 项目已在 [`CtYun/CtYun.csproj`](CtYun/CtYun.csproj) 中声明常用运行时标识，现可直接编译以下平台：
 
@@ -9,7 +9,6 @@
 - `linux-arm64`
 - `win-x64`
 - `win-arm64`
-- `android-arm64`
 
 在项目根目录执行：
 
@@ -45,22 +44,15 @@ dotnet publish CtYun/CtYun.csproj -c Release -r win-arm64 --self-contained true 
 
 输出文件为 `publish/win-arm64/CtYun.exe`。
 
-#### Android ARM64
-
-```
-dotnet publish CtYun/CtYun.csproj -c Release -r android-arm64 --self-contained true -p:PublishSingleFile=true -p:PublishAot=false -o publish/android-arm64
-```
-
-输出目录为 `publish/android-arm64/`。
-
 > 说明：当前示例统一使用 `-p:PublishAot=false` 进行跨平台发布，若需要在目标平台启用 Native AOT，需要对应平台工具链支持。
 
-### GitHub Actions 自动编译
+### GitHub Actions 自动编译与 Release 发布
 
-项目已包含自动编译工作流 [`.github/workflows/dotnet-desktop.yml`](.github/workflows/dotnet-desktop.yml)，支持以下触发方式：
+项目已包含自动工作流 [`.github/workflows/dotnet-desktop.yml`](.github/workflows/dotnet-desktop.yml)，支持以下触发方式：
 
 - push 到 `master`
 - 提交 pull request 到 `master`
+- push `v*` 标签
 - 手动触发 `workflow_dispatch`
 
 Actions 会自动构建以下平台产物：
@@ -70,54 +62,15 @@ Actions 会自动构建以下平台产物：
 - `linux-arm64`
 - `win-x64`
 - `win-arm64`
-- `android-arm64`
 
-每个平台会单独执行 [`dotnet publish`](.github/workflows/dotnet-desktop.yml:49)，并上传对应的压缩产物 artifact。
+每个平台会单独执行 [`dotnet publish`](.github/workflows/dotnet-desktop.yml:50)，并上传对应的压缩产物 artifact。
 
-如果仓库已配置 `DOCKER_USERNAME` 与 `DOCKER_PASSWORD` secrets，还会继续执行 [Docker 多架构镜像构建](.github/workflows/dotnet-desktop.yml:96)，推送：
+当推送 `v*` 标签时，还会自动执行 GitHub Release 发布流程，将构建产物作为附件上传到 Release。
+
+如果仓库已配置 `DOCKER_USERNAME` 与 `DOCKER_PASSWORD` secrets，还会继续执行 [Docker 多架构镜像构建](.github/workflows/dotnet-desktop.yml:112)，推送：
 
 - `ctyun:版本号`
 - `ctyun:latest`
-
-### Android 命令行运行说明
-
-推荐在 Termux 中运行。
-
-#### 1. 安装运行环境
-
-```
-pkg update
-pkg install dotnet
-```
-
-#### 2. 上传或复制发布产物到 Android 设备
-
-将 `publish/android-arm64/` 整个目录复制到手机，例如：
-
-```
-/data/data/com.termux/files/home/ctyun/
-```
-
-#### 3. 运行程序
-
-可使用环境变量方式启动，适合 Android/Termux：
-
-```
-export APP_USER='你的账号'
-export APP_PASSWORD='你的密码'
-export DEVICECODE='web_自定义32位随机串'
-./CtYun
-```
-
-如果未设置 `DEVICECODE`，程序会自动生成；在 Android 下会优先写入用户目录中的 `DeviceCode.txt`。
-
-如果以交互方式运行，也可以直接执行：
-
-```
-./CtYun
-```
-
-程序已在 [`ResolveAccounts()`](CtYun/Program.cs:198) 中兼容 Android shell/Termux 的环境变量读取逻辑。
 
 ### 多账号使用说明
 
