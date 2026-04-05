@@ -55,6 +55,30 @@ dotnet publish CtYun/CtYun.csproj -c Release -r android-arm64 --self-contained t
 
 > 说明：当前示例统一使用 `-p:PublishAot=false` 进行跨平台发布，若需要在目标平台启用 Native AOT，需要对应平台工具链支持。
 
+### GitHub Actions 自动编译
+
+项目已包含自动编译工作流 [`.github/workflows/dotnet-desktop.yml`](.github/workflows/dotnet-desktop.yml)，支持以下触发方式：
+
+- push 到 `master`
+- 提交 pull request 到 `master`
+- 手动触发 `workflow_dispatch`
+
+Actions 会自动构建以下平台产物：
+
+- `linux-x64`
+- `linux-arm`
+- `linux-arm64`
+- `win-x64`
+- `win-arm64`
+- `android-arm64`
+
+每个平台会单独执行 [`dotnet publish`](.github/workflows/dotnet-desktop.yml:49)，并上传对应的压缩产物 artifact。
+
+如果仓库已配置 `DOCKER_USERNAME` 与 `DOCKER_PASSWORD` secrets，还会继续执行 [Docker 多架构镜像构建](.github/workflows/dotnet-desktop.yml:96)，推送：
+
+- `ctyun:版本号`
+- `ctyun:latest`
+
 ### Android 命令行运行说明
 
 推荐在 Termux 中运行。

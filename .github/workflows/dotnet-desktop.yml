@@ -5,76 +5,115 @@ on:
     branches: [ "master" ]
   pull_request:
     branches: [ "master" ]
+  workflow_dispatch:
 
 jobs:
-  build-and-release:
+  build-binaries:
+    name: Build ${{ matrix.rid }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - rid: linux-x64
+            output_name: CtYun
+            archive_name: ctyun-linux-x64
+          - rid: linux-arm
+            output_name: CtYun
+            archive_name: ctyun-linux-arm
+          - rid: linux-arm64
+            output_name: CtYun
+            archive_name: ctyun-linux-arm64
+          - rid: win-x64
+            output_name: CtYun.exe
+            archive_name: ctyun-win-x64
+          - rid: win-arm64
+            output_name: CtYun.exe
+            archive_name: ctyun-win-arm64
+          - rid: android-arm64
+            output_name: CtYun
+            archive_name: ctyun-android-arm64
 
     steps:
-    # 检出代码 
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    # 设置 .NET 环境
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 8.0.x
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
 
-    # 确定版本号  
-    - name: Read project version
-      id: get-version
-      run: |
-        version=$(grep -oPm1 '(?<=<InformationalVersion>).*?(?=</InformationalVersion>)' CtYun/CtYun.csproj)
-        if [ -z "$version" ]; then
-          echo "Error: Unable to read version from CtYun.csproj"
-          exit 1
-        fi
-        echo "version=$version" >> $GITHUB_OUTPUT
-        echo "Version: $version"
-    # 恢复依赖
-    - name: Restore dependencies
-      run: dotnet restore
+      - name: Read project version
+        id: get-version
+        shell: bash
+        run: |
+          version=$(grep -oPm1 '(?<=<InformationalVersion>).*?(?=</InformationalVersion>)' CtYun/CtYun.csproj)
+          if [ -z "$version" ]; then
+            echo "Error: Unable to read version from CtYun.csproj"
+            exit 1
+          fi
+          echo "version=$version" >> $GITHUB_OUTPUT
+          echo "Version: $version"
 
-    # 构建应用程序
-    - name: Build
-      run: dotnet build --no-restore --configuration Release
+      - name: Restore dependencies
+        run: dotnet restore CtYun/CtYun.csproj
 
-    # 发布 Linux 二进制（单文件）
-    - name: Publish Linux Binary
-      run: dotnet publish CtYun/CtYun.csproj -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true -p:PublishAot=false -o publish/linux-x64
+      - name: Publish ${{ matrix.rid }}
+        run: dotnet publish CtYun/CtYun.csproj -c Release -r ${{ matrix.rid }} --self-contained true -p:PublishSingleFile=true -p:PublishAot=false -o publish/${{ matrix.rid }}
 
-    # 打包 Linux 二进制构建产物
-    - name: Pack Linux Binary
-      run: |
-        tar -czf ctyun-linux-x64-${{ steps.get-version.outputs.version }}.tar.gz -C publish/linux-x64 CtYun
+      - name: Pack ${{ matrix.rid }}
+        shell: bash
+        run: |
+          tar -czf ${{ matrix.archive_name }}-${{ steps.get-version.outputs.version }}.tar.gz -C publish/${{ matrix.rid }} .
 
-    # 上传 Linux 二进制构建产物
-    - name: Upload Linux Binary Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: ctyun-linux-x64-${{ steps.get-version.outputs.version }}
-        path: ctyun-linux-x64-${{ steps.get-version.outputs.version }}.tar.gz
+      - name: Upload ${{ matrix.rid }} artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.archive_name }}-${{ steps.get-version.outputs.version }}
+          path: ${{ matrix.archive_name }}-${{ steps.get-version.outputs.version }}.tar.gz
 
-    # 登录 Docker Hub
-    - name: Log in to Docker Hub
-      uses: docker/login-action@v2
-      with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
+  docker:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    needs: build-binaries
+    if: github.event_name != 'pull_request'
 
-    # 设置 Buildx
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
-      with:
-        driver: docker-container
+    steps:
+      - uses: actions/checkout@v4
 
-    # 构建和推送多架构 Docker 镜像
-    - name: Build and Push Multi-Arch Docker Image
-      run: |
-        docker buildx build \
-          --no-cache \
-          --platform linux/amd64,linux/arm64 \
-          -t ${{ secrets.DOCKER_USERNAME }}/ctyun:${{ steps.get-version.outputs.version }} \
-          -t ${{ secrets.DOCKER_USERNAME }}/ctyun:latest \
-          -f ./CtYun/Dockerfile \
-          --push .
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Read project version
+        id: get-version
+        shell: bash
+        run: |
+          version=$(grep -oPm1 '(?<=<InformationalVersion>).*?(?=</InformationalVersion>)' CtYun/CtYun.csproj)
+          if [ -z "$version" ]; then
+            echo "Error: Unable to read version from CtYun.csproj"
+            exit 1
+          fi
+          echo "version=$version" >> $GITHUB_OUTPUT
+          echo "Version: $version"
+
+      - name: Publish Linux x64 for Docker context
+        run: dotnet publish CtYun/CtYun.csproj -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true -p:PublishAot=false -o publish
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and Push Multi-Arch Docker Image
+        run: |
+          docker buildx build \
+            --platform linux/amd64,linux/arm64 \
+            -t ${{ secrets.DOCKER_USERNAME }}/ctyun:${{ steps.get-version.outputs.version }} \
+            -t ${{ secrets.DOCKER_USERNAME }}/ctyun:latest \
+            -f ./CtYun/Dockerfile \
+            --push .
