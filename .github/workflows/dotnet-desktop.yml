@@ -24,12 +24,12 @@ jobs:
     - name: Read project version
       id: get-version
       run: |
-        version=$(grep -oP '(?<=<FileVersion>).*?(?=</FileVersion>)' CtYun/CtYun.csproj)
+        version=$(grep -oPm1 '(?<=<InformationalVersion>).*?(?=</InformationalVersion>)' CtYun/CtYun.csproj)
         if [ -z "$version" ]; then
           echo "Error: Unable to read version from CtYun.csproj"
           exit 1
         fi
-        echo "version=$version" >> $GITHUB_ENV
+        echo "version=$version" >> $GITHUB_OUTPUT
         echo "Version: $version"
     # 恢复依赖
     - name: Restore dependencies
@@ -39,9 +39,21 @@ jobs:
     - name: Build
       run: dotnet build --no-restore --configuration Release
 
-    # 发布应用程序
-    - name: Publish Application
-      run: dotnet publish CtYun/CtYun.csproj -c Release -p:PublishAot=false -o publish
+    # 发布 Linux 二进制（单文件）
+    - name: Publish Linux Binary
+      run: dotnet publish CtYun/CtYun.csproj -c Release -r linux-x64 --self-contained true -p:PublishSingleFile=true -p:PublishAot=false -o publish/linux-x64
+
+    # 打包 Linux 二进制构建产物
+    - name: Pack Linux Binary
+      run: |
+        tar -czf ctyun-linux-x64-${{ steps.get-version.outputs.version }}.tar.gz -C publish/linux-x64 CtYun
+
+    # 上传 Linux 二进制构建产物
+    - name: Upload Linux Binary Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ctyun-linux-x64-${{ steps.get-version.outputs.version }}
+        path: ctyun-linux-x64-${{ steps.get-version.outputs.version }}.tar.gz
 
     # 登录 Docker Hub
     - name: Log in to Docker Hub
@@ -62,7 +74,7 @@ jobs:
         docker buildx build \
           --no-cache \
           --platform linux/amd64,linux/arm64 \
-          -t ${{ secrets.DOCKER_USERNAME }}/ctyun:${{ env.version }} \
+          -t ${{ secrets.DOCKER_USERNAME }}/ctyun:${{ steps.get-version.outputs.version }} \
           -t ${{ secrets.DOCKER_USERNAME }}/ctyun:latest \
           -f ./CtYun/Dockerfile \
           --push .

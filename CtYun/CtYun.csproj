@@ -6,8 +6,13 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>disable</Nullable>
 		<PublishAot>true</PublishAot>
+		<RuntimeIdentifiers>win-x64;win-arm64;linux-x64;linux-arm;linux-arm64;android-arm64</RuntimeIdentifiers>
 		<FileVersion>1.1.4</FileVersion>
 		<AssemblyVersion>1.1.4</AssemblyVersion>
+		<Version>2.5.0</Version>
+		<FileVersion>2.5.0.0</FileVersion>
+		<AssemblyVersion>2.5.0.0</AssemblyVersion>
+		<InformationalVersion>2.5.0</InformationalVersion>
 	</PropertyGroup>
 
 </Project>
